@@ -1,0 +1,30 @@
+{
+  "name": "rails-vibecoding",
+  "version": "0.1.0",
+  "description": "Rails 8 + Hotwire + Solid Suite + Kamal + Mayar + RubyLLM skills untuk shipping production apps via Claude Code. Designed sebagai companion plugin untuk BelajarGPT Vibecoding course — teaching non-programmer Indonesian untuk ship real Rails apps.",
+  "author": {
+    "name": "BelajarGPT",
+    "url": "https://belajargpt.co"
+  },
+  "homepage": "https://github.com/belajargpt/rails-vibecoding-skills",
+  "repository": "https://github.com/belajargpt/rails-vibecoding-skills",
+  "license": "MIT",
+  "keywords": [
+    "rails",
+    "ruby",
+    "rails-8",
+    "hotwire",
+    "turbo",
+    "stimulus",
+    "kamal",
+    "solid-queue",
+    "solid-cache",
+    "solid-cable",
+    "mayar",
+    "payment-gateway-indonesia",
+    "rubyllm",
+    "vibecoding",
+    "dhh-style",
+    "belajargpt"
+  ]
+}

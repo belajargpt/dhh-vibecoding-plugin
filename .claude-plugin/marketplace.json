@@ -1,0 +1,34 @@
+{
+  "name": "rails-vibecoding-marketplace",
+  "owner": {
+    "name": "BelajarGPT",
+    "url": "https://github.com/belajargpt"
+  },
+  "metadata": {
+    "description": "Claude Code plugin marketplace untuk BelajarGPT Vibecoding course — Rails 8 + Hotwire + Solid Suite + Kamal + Mayar + RubyLLM skills",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "rails-vibecoding",
+      "description": "Rails 8 + Hotwire + Kamal + Mayar + RubyLLM skills untuk shipping production apps dengan Claude Code. Designed untuk non-programmer audience BelajarGPT Vibecoding course.",
+      "author": {
+        "name": "BelajarGPT",
+        "url": "https://belajargpt.co"
+      },
+      "homepage": "https://github.com/belajargpt/rails-vibecoding-skills",
+      "tags": [
+        "rails",
+        "ruby",
+        "hotwire",
+        "kamal",
+        "mayar",
+        "rubyllm",
+        "vibecoding",
+        "belajargpt",
+        "indonesian"
+      ],
+      "source": "./rails-vibecoding"
+    }
+  ]
+}
