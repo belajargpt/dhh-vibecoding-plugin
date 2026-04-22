@@ -1,34 +1,43 @@
 {
-  "name": "rails-vibecoding-marketplace",
+  "name": "dhh-vibecoding-marketplace",
   "owner": {
     "name": "BelajarGPT",
     "url": "https://github.com/belajargpt"
   },
   "metadata": {
-    "description": "Claude Code plugin marketplace untuk BelajarGPT Vibecoding course — Rails 8 + Hotwire + Solid Suite + Kamal + Mayar + RubyLLM skills",
-    "version": "0.1.0"
+    "description": "Vibecoding dengan filosofi DHH — Claude Code plugin marketplace untuk Rails 8 + Hotwire + Kamal shipping. Distilled from 37signals' Fizzy, Campfire, Writebook.",
+    "version": "0.2.0"
   },
   "plugins": [
     {
-      "name": "rails-vibecoding",
-      "description": "Rails 8 + Hotwire + Kamal + Mayar + RubyLLM skills untuk shipping production apps dengan Claude Code. Designed untuk non-programmer audience BelajarGPT Vibecoding course.",
+      "name": "dhh-vibecoding",
+      "description": "10 skills yang bikin Claude Code fluent di DHH-style Rails: rails-conventions, turbo-frames, turbo-streams, stimulus-controllers, vanilla-css, auth-setup, solid-suite-config, rails-debug-helper, mayar-payment-integration, rubyllm-patterns. Zero build tools. No devise. No Sidekiq. No Redis. No Tailwind.",
       "author": {
         "name": "BelajarGPT",
         "url": "https://belajargpt.co"
       },
-      "homepage": "https://github.com/belajargpt/rails-vibecoding-skills",
+      "homepage": "https://github.com/belajargpt/dhh-vibecoding-plugin",
       "tags": [
+        "dhh",
+        "37signals",
         "rails",
         "ruby",
+        "rails-8",
         "hotwire",
+        "turbo",
+        "stimulus",
         "kamal",
+        "solid-queue",
+        "solid-cache",
+        "solid-cable",
         "mayar",
         "rubyllm",
+        "vanilla-css",
         "vibecoding",
         "belajargpt",
         "indonesian"
       ],
-      "source": "./rails-vibecoding"
+      "source": "./dhh-vibecoding"
     }
   ]
 }

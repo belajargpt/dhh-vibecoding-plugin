@@ -1,0 +1,35 @@
+{
+  "name": "dhh-vibecoding",
+  "version": "0.2.0",
+  "description": "Vibecoding dengan filosofi DHH. 10 skills distilled from 37signals' Fizzy, Campfire, Writebook — zero build tools, no devise, no Sidekiq, no Redis, no Tailwind. Teaches Claude Code to write Rails 8 + Hotwire + Solid Suite + Kamal apps the DHH way.",
+  "author": {
+    "name": "BelajarGPT",
+    "url": "https://belajargpt.co"
+  },
+  "homepage": "https://github.com/belajargpt/dhh-vibecoding-plugin",
+  "repository": "https://github.com/belajargpt/dhh-vibecoding-plugin",
+  "license": "MIT",
+  "keywords": [
+    "dhh",
+    "37signals",
+    "fizzy",
+    "campfire",
+    "writebook",
+    "rails",
+    "ruby",
+    "rails-8",
+    "hotwire",
+    "turbo",
+    "stimulus",
+    "kamal",
+    "solid-queue",
+    "solid-cache",
+    "solid-cable",
+    "mayar",
+    "payment-gateway-indonesia",
+    "rubyllm",
+    "vanilla-css",
+    "vibecoding",
+    "belajargpt"
+  ]
+}
