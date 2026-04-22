@@ -1,73 +1,164 @@
 ---
 name: mayar-payment-integration
-description: Use when integrating Mayar payment gateway in Rails apps. Applies to hosted checkout integration, webhook handling, payment verification, digital product delivery with signed URLs, and Indonesian payment gateway patterns. Triggers when user mentions Mayar, pembayaran, checkout, QRIS, webhook, payment gateway, bayar, Indonesian payment, or hosted checkout. Also applies to similar gateways (Tripay, Xendit, iPaymu, Duitku) — pattern transfers.
+description: Use when integrating Mayar payment gateway in Rails apps. Applies to hosted checkout integration, payment creation, webhook registration + handling, payment status verification, and Indonesian payment gateway patterns. Triggers when user mentions Mayar, pembayaran, checkout, QRIS, webhook, payment gateway, bayar, Indonesian payment, or hosted checkout. Pattern also transfers to similar gateways (Tripay, Xendit, iPaymu, Duitku) with endpoint substitution.
 ---
 
 # Mayar Payment Integration
 
+> Verified against Mayar docs at https://docs.mayar.id/ — Headless API v1.
+
 ## Philosophy
 
-> Hosted checkout. Webhook + re-fetch. Never trust webhook body alone.
+> Hosted checkout. Register webhook separately. Always re-fetch payment status before fulfilling.
 
-Mayar = Indonesian payment gateway with hosted checkout pattern:
-1. Buyer clicks "Beli" on app
-2. App creates payment request → redirects buyer to Mayar
-3. Buyer pays at Mayar (QRIS, transfer, card)
-4. Mayar redirects back to app + POSTs webhook
-5. App verifies payment via re-fetch, fulfills
-
-## API Endpoints
+## Base URLs
 
 | Environment | URL |
 |---|---|
-| Sandbox | `https://api.mayar.club` |
-| Production | `https://api.mayar.id` |
+| Production | `https://api.mayar.id/hl/v1` |
+| Sandbox | `https://api.mayar.club/hl/v1` |
 
-Store in `Rails.application.credentials.mayar.base_url` + `api_key`.
+Store `base_url` + `api_key` in Rails credentials:
+```yaml
+mayar:
+  base_url: https://api.mayar.club/hl/v1
+  api_key: mayar-xxx...
+  webhook_token: random-string-in-url-path
+```
 
-## Payment Creation Pattern
+## Authentication
 
+All requests use Bearer token:
+```
+Authorization: Bearer {API_KEY}
+```
+
+## Create Payment Request
+
+**Endpoint:** `POST /hl/v1/payment/create`
+
+**Required body:**
+```json
+{
+  "name": "string",
+  "email": "string",
+  "amount": 170000,
+  "mobile": "08996136751",
+  "redirectUrl": "https://yourapp.com/orders/{token}/thank-you",
+  "description": "Hook Content Playbook",
+  "expiredAt": "2025-12-29T09:41:09.401Z"
+}
+```
+
+**Response:**
+```json
+{
+  "statusCode": 200,
+  "messages": "success",
+  "data": {
+    "id": "uuid",
+    "transaction_id": "uuid",
+    "link": "https://mayar.link/..."
+  }
+}
+```
+
+Redirect buyer to `data.link`. After payment, Mayar redirects back to `redirectUrl`.
+
+### Rails Service Class
 ```ruby
 class MayarPaymentService
-  def self.create(order:, amount:, description:)
-    response = Faraday.post("#{base_url}/hl/v1/payment/create") do |req|
-      req.headers["Authorization"] = "Bearer #{api_key}"
-      req.headers["Content-Type"] = "application/json"
+  def self.create(order:, amount:, description:, redirect_url:)
+    conn = Faraday.new(url: credentials[:base_url]) do |f|
+      f.request :json
+      f.response :json
+    end
+
+    response = conn.post("payment/create") do |req|
+      req.headers["Authorization"] = "Bearer #{credentials[:api_key]}"
       req.body = {
         name: order.buyer_name,
         email: order.buyer_email,
         amount: amount,
+        mobile: order.buyer_mobile,
+        redirectUrl: redirect_url,
         description: description,
-        webhookUrl: "#{Rails.application.routes.url_helpers.root_url}webhooks/mayar/#{webhook_token}"
-      }.to_json
+        expiredAt: 24.hours.from_now.iso8601(3)
+      }
     end
-    JSON.parse(response.body)
+
+    response.body.dig("data", "link")
+  end
+
+  def self.credentials
+    Rails.application.credentials.mayar
   end
 end
 ```
 
-Returns `data.link` → redirect buyer to that URL.
+## Register Webhook URL (One-Time Setup)
 
-## ⚠️ Critical Security Pattern — Webhook Re-fetch
+**Endpoint:** `GET /hl/v1/webhook/register` (yes, GET with body per docs)
 
-**Mayar webhooks have NO HMAC signature.** Attacker can POST fake "payment confirmed" to webhook URL. Kalau app trusts webhook body, attacker gets product free.
+**Body:**
+```json
+{ "urlHook": "https://yourapp.com/webhooks/mayar/{random-token}" }
+```
 
-### Defense: re-fetch pattern
+Done once per merchant account (via script or dashboard). URL must be publicly accessible.
 
+## Webhook Events
+
+Mayar sends POST to your `urlHook` with JSON body. Event types:
+
+- `payment.received` — payment completed
+- `payment.reminder` — after 29 min, unpaid
+- `shipper.status` — physical shipping
+- `membership.*` — membership events (5 sub-types)
+
+### Webhook payload (key fields)
+```json
+{
+  "event": "payment.received",
+  "data": {
+    "id": "uuid",
+    "status": "paid",
+    "createdAt": "...",
+    "updatedAt": "..."
+  },
+  "merchantId": "...",
+  "customerName": "...",
+  "customerEmail": "...",
+  "amount": 170000,
+  "productName": "..."
+}
+```
+
+## ⚠️ CRITICAL — Re-fetch Before Fulfilling
+
+**Mayar webhooks have NO HMAC signature.** Attacker can POST fake `payment.received` to your webhook URL → if app trusts body, attacker gets product free.
+
+**Defense: always re-fetch from source of truth.**
+
+### Re-fetch Endpoint
+`GET /hl/v1/payment/{id}` with Bearer auth. Returns current status.
+
+### Webhook Controller Pattern
 ```ruby
 class WebhooksController < ApplicationController
-  skip_before_action :verify_authenticity_token  # webhooks are POST without CSRF
+  skip_before_action :verify_authenticity_token  # webhooks bypass CSRF
 
   def mayar
-    return head :not_found unless params[:token] == Rails.application.credentials.mayar.webhook_token
+    return head :not_found unless params[:token] == Rails.application.credentials.mayar[:webhook_token]
 
-    order_id = params[:order_id]
+    event = params[:event]
+    payment_id = params.dig(:data, :id)
 
-    # ⚠️ Don't trust params[:status]. Re-fetch from Mayar API.
-    mayar_payment = MayarPaymentService.fetch(order_id: order_id)
-
-    if mayar_payment["status"] == "paid"
-      Order.find(order_id).mark_as_paid!
+    case event
+    when "payment.received"
+      # ⚠️ Don't trust params[:data][:status]. Re-fetch.
+      status = MayarPaymentService.fetch_status(payment_id)
+      Order.find_by!(mayar_payment_id: payment_id).mark_as_paid! if status == "paid"
     end
 
     head :ok
@@ -75,51 +166,53 @@ class WebhooksController < ApplicationController
 end
 ```
 
-**Rule:** Always re-fetch from source of truth before fulfilling. Same pattern for Tripay, Xendit, iPaymu.
+```ruby
+class MayarPaymentService
+  def self.fetch_status(payment_id)
+    conn = Faraday.new(url: credentials[:base_url])
+    response = conn.get("payment/#{payment_id}") do |req|
+      req.headers["Authorization"] = "Bearer #{credentials[:api_key]}"
+    end
+    JSON.parse(response.body).dig("data", "status")
+  end
+end
+```
 
-## Hard-to-Guess Webhook URL
+## Hard-to-Guess Webhook URL (Secondary Defense)
 
-Use random token in URL path:
+Use random token in URL path (already shown above):
 ```ruby
 # config/routes.rb
 post "/webhooks/mayar/:token", to: "webhooks#mayar"
 ```
 
-Token stored in credentials. Not the only defense (re-fetch is primary) but adds obscurity layer.
+Obscurity adds layer but re-fetch is primary defense.
 
-## Digital Product Delivery (No Email)
+## Order State Machine (Idempotent)
 
-After payment confirmed, redirect buyer to signed download URL:
-
-```ruby
-class OrdersController < ApplicationController
-  def show
-    @order = Order.find_signed!(params[:signed_token], purpose: :download, expires_in: 24.hours)
-  end
-end
-
-# Generate signed URL after payment
-order.signed_id(purpose: :download, expires_in: 24.hours)
-```
-
-No SMTP needed. Buyer bookmarks page. QR code for save-to-phone.
-
-## State Machine (Order lifecycle)
-
+Webhooks can retry — handler must be idempotent:
 ```ruby
 class Order < ApplicationRecord
   enum status: { pending: 0, paid: 1, refunded: 2, expired: 3 }
 
   def mark_as_paid!
-    return if paid?  # idempotent — webhook retries OK
+    return if paid?  # idempotent — safe on webhook retry
     update!(status: :paid, paid_at: Time.current)
     DeliveryJob.perform_later(self)
   end
 end
 ```
 
-Idempotency critical — webhooks can fire multiple times.
+## Scope Boundaries (Student Responsibility)
+
+- NPWP/KTP untuk merchant active — student's responsibility, not covered in integration.
+- Refund flows — handle via Mayar dashboard manually for v1.
+- Chargebacks — handle manually, not in scope.
 
 ## References
 
-- `references/webhooks.md` — SSRF protection, delinquency tracking, webhook state machines, retry patterns
+- `references/webhooks.md` — general webhook patterns (SSRF protection, delinquency tracking, state machines) from 37signals
+
+## Authoritative Source
+
+Official docs: https://docs.mayar.id/ — check for API changes, new endpoints, deprecations before relying on this skill.
