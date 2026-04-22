@@ -237,7 +237,7 @@ See `vps-provisioning` skill (extras) for Tailscale + Cloudflare hardening.
 | **Biznet Gio** | Rp 150K/mo | Jakarta | Best Indonesia latency |
 | **Linode / Akamai** | $12/mo | Global | Solid alternative to DO |
 
-For Indonesian market (course audience): **Biznet Gio** for Indonesia-first apps, **DigitalOcean SGP1** for global apps.
+For Indonesia-first apps: **Biznet Gio** (lowest latency from Jakarta). For global reach with good Indonesia latency: **DigitalOcean SGP1** or **Linode Singapore**.
 
 ## Anti-Patterns
 

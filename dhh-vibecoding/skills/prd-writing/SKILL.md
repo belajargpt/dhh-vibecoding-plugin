@@ -12,7 +12,7 @@ description: Use when planning a new feature, app, or product before writing any
 A Product Requirements Document (PRD) is a short, structured spec you write **before** prompting Claude Code. It becomes the context every prompt references:
 
 ```
-"Berdasarkan PRD saya [paste], bikin [feature]..."
+"Based on my PRD [paste], build [feature]..."
 ```
 
 Without a PRD, Claude Code guesses. With a PRD, Claude Code aligns.
@@ -44,10 +44,10 @@ your-project/
 ## Process
 
 1. **Draft** — fill in all 9 sections. Takes 20-30 min for v1 apps, up to 1 hour for complex ones.
-2. **Review via AI** — prompt: *"Review PRD ini, identify ambiguity di scope atau success criteria."*
+2. **Review via AI** — prompt: *"Review this PRD, identify ambiguity in scope or success criteria."*
 3. **Revise** — tighten based on feedback.
 4. **Commit to git** — PRD is now source of truth.
-5. **Reference in prompts** — *"Berdasarkan PRD saya [paste relevant sections], implement X."*
+5. **Reference in prompts** — *"Based on my PRD [paste relevant sections], implement X."*
 
 ## PRD Variants by Use Case
 
@@ -124,11 +124,11 @@ Me (the author, 30-40 year old professional) + casual readers landing from socia
 **Out-of-scope section** is where PRD earns its keep:
 - "We're NOT building X" prevents scope creep mid-build
 - Forces discipline: decide now what's important
-- Student says yes to the few, not everything
+- You say yes to the few, not everything
 
 **Success criteria** prevents infinite tweaking:
-- Without metrics, student polishes forever
-- With "10 customers in 2 weeks" or "99% uptime," project has finish line
+- Without metrics, you polish forever
+- With "10 customers in 2 weeks" or "99% uptime," project has a finish line
 
 **Mockup** catches gaps text misses:
 - Drawing forces you to think about the user flow spatially
@@ -149,7 +149,7 @@ Me (the author, 30-40 year old professional) + casual readers landing from socia
 > "Build me a blog"
 
 **Good:**
-> "Berdasarkan PRD di docs/PRD.md [paste], scaffold the Post model with all must-have fields (title, body ActionText, category, hero_image via Active Storage, published_at). Make sure you respect the out-of-scope section."
+> "Based on the PRD at docs/PRD.md [paste], scaffold the Post model with all must-have fields (title, body ActionText, category, hero_image via Active Storage, published_at). Make sure you respect the out-of-scope section."
 
 **Better (iterative):**
 > Use PRD as conversational anchor throughout project. Reference specific sections:

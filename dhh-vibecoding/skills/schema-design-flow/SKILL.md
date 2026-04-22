@@ -5,7 +5,7 @@ description: Use when designing database schema, tables, columns, associations, 
 
 # Schema Design Flow — Think in Questions, Not Tables
 
-> Non-programmers plan apps in stories. Developers think in tables. This skill bridges both: Claude asks the story questions, the student answers, Claude drafts the tables. **Never generate migrations without running the interrogation first** — regardless of what kind of app it is (blog, store, booking, directory, CRM, social, internal tool).
+> People plan apps in stories. Developers think in tables. This skill bridges both: Claude asks the story questions, the user answers, Claude drafts the tables. **Never generate migrations without running the interrogation first** — regardless of what kind of app it is (blog, store, booking, directory, CRM, social, internal tool).
 
 ## Philosophy
 
@@ -60,75 +60,77 @@ Use this as a cheat sheet when asking: *"Is this more like a content record, a t
 
 ### Example A — Content (Blog Post)
 
-User: *"Bikin table untuk blog post."*
+User: *"Create a table for blog posts."*
 
 Claude (good):
 ```
-Sebelum bikin migration, saya tanya 7 hal dulu:
+Before I generate the migration, 7 quick questions:
 
-1. Siapa yang bikin post — cuma kamu sebagai author, atau ada author lain?
-2. Siapa yang bisa baca — public, atau login only?
-3. Siapa yang bisa edit / delete — author aja, atau ada editor?
-4. Post ini punya category / tag? Punya author (belongs_to user)?
-5. Lifecycle — langsung publish, atau ada draft dulu?
-6. Apa yang unik — slug dari title, atau ID aja cukup?
-7. Kalau author dihapus, postnya ikut hilang atau tetap (anonymous author)?
+1. Who creates posts — just you as the author, or multiple authors?
+2. Who can read them — public, or logged-in users only?
+3. Who can edit / delete — author only, or admin / editor roles?
+4. Does a post belong to a category / tag? A User (belongs_to)?
+5. Lifecycle — publish immediately, or draft → published flow?
+6. What's unique — slug derived from title, or is ID alone enough?
+7. If the author is deleted, do their posts vanish or stay (nullify author)?
 
-Plus 2 ekstra: butuh hero image (Active Storage)? Butuh counter berapa comment per post?
+Plus 2 extras: do you need a hero image (Active Storage)? A counter of
+comments per post for fast display?
 ```
 
 ### Example B — Commerce (Product + Order)
 
-User: *"Saya mau jual produk digital. Perlu table untuk product dan order."*
+User: *"I want to sell digital products. I need product and order tables."*
 
 Claude (good):
 ```
-Dua table sekaligus. Saya tanya per table:
+Two tables. Let me ask per table:
 
 PRODUCT:
-1. Siapa bikin — kamu admin aja, atau multi-seller?
-2. Siapa bisa lihat — public semua, atau cuma member?
-3. Siapa bisa edit — admin aja kan?
-4. Product punya category? Punya file (Active Storage)?
+1. Who creates — just you as admin, or multi-seller marketplace?
+2. Who can view — public browsing, or members only?
+3. Who can edit — admin only?
+4. Does a product have a category? Attached files (Active Storage)?
 5. Lifecycle — active / out-of-stock / discontinued?
-6. Unik — slug dari name, atau SKU?
-7. Hapus product — apakah order lama yang pakai product itu juga hilang?
+6. Unique — slug derived from name, or SKU?
+7. If a product is deleted, do historical orders that used it also vanish?
 
 ORDER:
-1. Siapa bikin — buyer saat checkout, benar?
-2. Siapa bisa lihat — buyer + admin saja?
-3. Siapa bisa edit — admin only (refund), buyer gak bisa?
-4. Order belongs_to buyer (User) dan product — benar?
+1. Who creates — the buyer at checkout, correct?
+2. Who can view — buyer + admin only?
+3. Who can edit — admin only (for refunds), buyer can't?
+4. Order belongs_to a buyer (User) and one or more products — correct?
 5. Lifecycle — pending → paid → fulfilled → refunded?
-6. Unik — order_number (readable) atau UUID?
-7. Hapus buyer — order tetap disimpan (audit), jadi nullify atau restrict.
+6. Unique — human-readable order_number, or UUID?
+7. If the buyer is deleted, orders stay for financial audit → nullify or restrict.
 ```
 
 ### Example C — Booking (Reservation)
 
-User: *"App untuk booking studio foto per jam."*
+User: *"An app for booking photo studio slots by the hour."*
 
 Claude (good):
 ```
-Domain booking = conflict prevention jadi penting. Saya tanya:
+Booking domain = conflict prevention matters. Questions:
 
-1. Siapa bikin booking — customer (public form), atau admin only?
-2. Siapa bisa lihat — customer yang booking + admin?
-3. Siapa bisa cancel — customer sendiri sampai H-1, admin kapan aja?
-4. Booking belongs_to customer + studio? Studio punya owner?
+1. Who creates a booking — customer via public form, or admin only?
+2. Who can view — customer who booked + admin?
+3. Who can cancel — customer up to 24h before, admin any time?
+4. Booking belongs_to a customer + a studio? Does studio have an owner?
 5. Lifecycle — requested → confirmed → completed → cancelled?
-6. Unik — kombinasi (studio_id, start_at, end_at) gak boleh overlap?
-   → ini pakai custom validation + index, bukan DB unique biasa
-7. Kalau studio ditutup (dihapus) — booking lama diapain?
+6. Unique — combination (studio_id, start_at, end_at) must not overlap?
+   → this is a custom validation + index, not a standard DB unique constraint
+7. If a studio is closed (deleted), what happens to past bookings?
 
-Plus: butuh buffer time antar booking? Pricing per jam di product, atau per booking?
+Plus: do you need a buffer time between bookings? Pricing per hour on
+the product, or per booking?
 ```
 
 **Notice:** Same 7 questions. Different answers → different schema shapes. Same flow works whether the app is a blog, a store, a CRM, a booking tool, or an internal dashboard.
 
 ## The Schema Summary Template
 
-After interrogation, draft the schema in **plain language** (not code yet). This is the student's last checkpoint:
+After interrogation, draft the schema in **plain language** (not code yet). This is the user's last checkpoint before code:
 
 ```
 Table: <plural_name>
@@ -155,7 +157,7 @@ Cascade:
 - <parent>.destroy → <this> <cascade decision from Q7>
 ```
 
-Fill in the blanks for the domain. Then ask: *"Oke ga schema-nya? Kalau setuju, saya bikin migration. Kalau ada yang mau diubah, sekarang waktunya."*
+Fill in the blanks for the domain. Then ask: *"Does this schema look right? If yes, I'll generate the migration. If anything should change, now's the time."*
 
 ## Worked Draft — Blog Post (Content Domain)
 
@@ -581,7 +583,7 @@ Include the full original definition as the 3rd+ argument so `down` is reversibl
 2. **Run the interrogation** — core 7 + applicable context questions. One batch.
 3. **Wait for answers.** Don't write code.
 4. **Draft the schema summary in plain language** (template above, filled in for their domain).
-5. **Confirm with the user.** "Oke ga schema-nya?"
+5. **Confirm with the user.** "Does this schema look right?"
 6. **Generate the migration.** Open the file, tighten defaults / nulls / indexes.
 7. **Run `bin/rails db:migrate`.**
 8. **Sanity-check reversibility:** `bin/rails db:rollback && bin/rails db:migrate`. Both succeed → schema is reversible.

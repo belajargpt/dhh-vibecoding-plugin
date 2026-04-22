@@ -203,9 +203,9 @@ class Order < ApplicationRecord
 end
 ```
 
-## Scope Boundaries (Student Responsibility)
+## Scope Boundaries (Merchant Responsibility)
 
-- NPWP/KTP untuk merchant active — student's responsibility, not covered in integration.
+- NPWP/KTP for merchant activation — Mayar onboarding requirement, handled outside the code integration.
 - Refund flows — handle via Mayar dashboard manually for v1.
 - Chargebacks — handle manually, not in scope.
 

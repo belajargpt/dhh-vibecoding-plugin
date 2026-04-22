@@ -52,7 +52,7 @@ bin/rails generate authentication
 
 ## ⚠️ What the Generator Does NOT Include
 
-**No signup/registration flow.** Student must build:
+**No signup/registration flow.** You must build:
 - `RegistrationsController#new` + `#create`
 - Signup form view
 - Routes: `resources :registrations, only: [:new, :create]`

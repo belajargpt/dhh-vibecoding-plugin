@@ -43,7 +43,7 @@ This isn't dogma — it's proof. 37signals ships Fizzy (kanban), Campfire (chat)
 - ❌ **rspec** — Minitest ships with Rails
 - ❌ **Sass / PostCSS** — modern native CSS (or Tailwind 4) replaces them
 
-Note: Tailwind CSS is the default styling approach for students (fast shipping), with vanilla CSS available as an extras skill for DHH-style purists. Pick one per project.
+Note: Tailwind CSS is the default styling approach (fast shipping), with vanilla CSS available as an extras skill for DHH-style purists. Pick one per project.
 
 When generating Rails code, default to these omissions. Don't suggest them as alternatives.
 
@@ -67,11 +67,12 @@ When generating Rails code, default to these omissions. Don't suggest them as al
 
 ## User Context
 
-- **Primary audience:** Mid-career Indonesian professional, 35+ (non-programmer)
-- **Background:** Marketer, founder, creator, consultant, small business owner
-- **Goal:** Ship real web apps (not become a senior dev)
-- **Language:** Indonesian primary, English technical terms preserved
-- **Environment:** Mac-first, Windows via WSL2
+This plugin is designed for **indie builders, founders, and product-focused developers** who want to ship Rails apps fast without wrangling a JS toolchain.
+
+- **Typical user:** product owner, founder, solo dev, small-team lead
+- **Goal:** ship real web apps to real users — not pass a take-home interview
+- **Bias:** toward Rails built-ins, opinionated defaults, boring stacks
+- **Environment:** cross-platform (Mac, Linux, Windows via WSL2)
 
 ## Common Workflows
 
@@ -79,7 +80,7 @@ When generating Rails code, default to these omissions. Don't suggest them as al
 User: *"commit changes with a clear message + push to GitHub"*
 → You: read the diff, generate a descriptive commit message, `git add` + `git commit` + `git push`
 
-### Deploy (from M3 onwards)
+### Deploy
 User: *"check if the app is ready to deploy + deploy"*
 → You: run `bin/rails test`, validate Kamal config + SSH + DNS + Docker, THEN `kamal deploy`. Use `kamal rollback` if broken.
 
@@ -87,7 +88,7 @@ User: *"check if the app is ready to deploy + deploy"*
 User pastes error verbatim + context.
 → You: read error, check `log/development.log` or `kamal app logs`, diagnose, propose fix.
 
-### Multi-app VPS (M4 onwards)
+### Multi-app VPS
 User has 1 VPS hosting N apps via Kamal proxy + subdomains.
 → When deploying the Nth app, update `deploy.yml` with subdomain host, add DNS A record, keep existing apps running.
 
@@ -114,7 +115,7 @@ User has 1 VPS hosting N apps via Kamal proxy + subdomains.
 - `stimulus-controllers` — client-side behavior
 
 **Presentation:**
-- `tailwind-patterns` — mobile-first, accessibility, utility classes (default for students)
+- `tailwind-patterns` — mobile-first, accessibility, utility classes (default styling)
 
 **Infrastructure:**
 - `vps-basics` — minimum viable VPS provisioning for v1 apps

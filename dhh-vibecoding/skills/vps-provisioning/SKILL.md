@@ -5,7 +5,7 @@ description: "[EXTRAS / ADVANCED] Use when provisioning a fresh VPS (Hetzner, Bi
 
 # VPS Provisioning & Hardening (Extras / Advanced)
 
-> **This is an extras skill.** Most students should use `vps-basics` for v1 apps. Come back here when you need Tailscale private mesh, Cloudflare-only ingress, or multi-server networking.
+> **This is an extras skill.** Most setups should use `vps-basics` for v1 apps. Come back here when you need Tailscale private mesh, Cloudflare-only ingress, or multi-server networking.
 
 > Step-by-step guide for advanced provisioning and securing of a VPS for deploying web apps with Docker, Kamal, Cloudflare, and Tailscale. Based on Ubuntu 24 LTS.
 
