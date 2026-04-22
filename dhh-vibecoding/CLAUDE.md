@@ -1,6 +1,6 @@
 # DHH Vibecoding — Project Conventions
 
-> *"The best code is the code you don't write. The second best is the code that's obviously correct."* — DHH
+> *"You can't counter complexity without being willing to sacrifice. That is the nature of conceptual compression. To make things simpler, you have to take something away."* — DHH, RailsConf 2018
 
 This plugin teaches Claude Code to write Rails apps **the DHH way** — distilled from 37signals production apps (Fizzy, Campfire, Writebook). The context below loads every session so code generation, debugging, and deployment stay consistent with this philosophy.
 

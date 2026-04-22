@@ -214,15 +214,21 @@ Active Storage JS handles presigning + direct upload. App server only gets the b
 
 ## Kamal Deployment — Persistent Volumes
 
-Local disk service needs Kamal volume:
+Kamal containers are ephemeral by design — replaced on every deploy. To keep Active Storage local-disk uploads across deploys, declare a named volume in `config/deploy.yml`:
 
 ```yaml
 # config/deploy.yml
 volumes:
-  - "storage:/rails/storage"   # persist uploads across deploys
+  - "storage:/rails/storage"   # Docker named volume, persists across container replacement
 ```
 
-Without this, every deploy loses uploads.
+Set up correctly, Kamal **does** persist uploads: the named volume `storage` lives on the host, survives container swaps, and is re-mounted into each new container at `/rails/storage`. Forgetting the volume is the one failure mode — containers boot with an empty filesystem and old uploads are orphaned.
+
+Verify after first deploy:
+```bash
+kamal app exec "ls -la /rails/storage"   # should show existing blobs
+docker volume ls                          # look for <service-name>_storage
+```
 
 ## Testing
 

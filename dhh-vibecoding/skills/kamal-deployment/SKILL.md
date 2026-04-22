@@ -95,10 +95,12 @@ env:
     - RAILS_MASTER_KEY
 
 volumes:
-  - "app_storage:/app/storage"
+  - "app_storage:/rails/storage"   # named Docker volume — persists across deploys
 
-asset_path: /app/public/assets
+asset_path: /rails/public/assets
 ```
+
+**Volumes note:** Kamal **does** persist data when you declare it. The named volume (`app_storage`) lives on the host and is re-mounted into each new container. Forget it and uploads/SQLite DB are lost on next deploy; declare it once and state survives every rollout.
 
 ## `.kamal/secrets`
 

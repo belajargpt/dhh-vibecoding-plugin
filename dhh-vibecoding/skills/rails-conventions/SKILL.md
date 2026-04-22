@@ -7,7 +7,7 @@ description: Use when writing Ruby on Rails code in DHH's 37signals style. Appli
 
 ## Core Philosophy
 
-> Vanilla Rails is plenty. The best code is the code you don't write.
+> Vanilla Rails is plenty. Convention over configuration, rich domain models, REST purity.
 
 - **Rich domain models** over service objects
 - **CRUD controllers** over custom actions

@@ -2,7 +2,7 @@
 
 > Vibecoding with the DHH philosophy. Distilled from 37signals' Fizzy, Campfire, and Writebook — production apps shipped with **zero build tools**, **no devise**, **no Sidekiq**, **no Redis**.
 
-*"The best code is the code you don't write. The second best is the code that's obviously correct."* — DHH
+*"Convention over configuration is the corner stone of Rails and a principle I hold dear. Stop wasting time configuring things where the differences do not matter."* — DHH
 
 ---
 
