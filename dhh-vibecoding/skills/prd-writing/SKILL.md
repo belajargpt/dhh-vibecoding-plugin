@@ -7,7 +7,7 @@ description: Use when planning a new feature, app, or product before writing any
 
 ## Philosophy
 
-> The biggest mistake non-programmers make with AI coding: prompt immediately without planning. Result is wrong every time.
+> The biggest mistake people make with AI coding: prompt immediately without planning. Result is wrong every time.
 
 A Product Requirements Document (PRD) is a short, structured spec you write **before** prompting Claude Code. It becomes the context every prompt references:
 

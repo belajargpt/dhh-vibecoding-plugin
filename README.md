@@ -69,7 +69,7 @@ Each skill auto-invokes based on trigger keywords in your prompts.
 - **`stimulus-controllers`** — client-side behavior sprinkles, 55+ Fizzy patterns catalog
 
 ### Presentation
-- **`tailwind-patterns`** — Tailwind CSS 4, mobile-first responsive, accessibility (ARIA, focus states), component patterns (button/card/form/nav). Default styling approach for students.
+- **`tailwind-patterns`** — Tailwind CSS 4, mobile-first responsive, accessibility (ARIA, focus states), component patterns (button/card/form/nav). Default styling approach for fast shipping.
 
 ### Infrastructure
 - **`vps-basics`** — minimum viable VPS provisioning (SSH key, UFW, swap, Docker, fail2ban). 15-minute setup for v1 apps.
