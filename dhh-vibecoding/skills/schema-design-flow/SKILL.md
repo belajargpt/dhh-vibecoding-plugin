@@ -1,11 +1,11 @@
 ---
 name: schema-design-flow
-description: Use when designing database schema, tables, columns, associations, or migrations in Rails before writing code. Walks the user through a Socratic interrogation (who owns this? who sees it? what lifecycle? what's unique?) before generating any migration. Applies to new models, schema changes, adding columns, multi-tenancy / permission boundaries, state modeling (timestamps vs booleans), associations (belongs_to / has_many / has_many :through), indexes, foreign keys, NOT NULL discipline, default values, and reversible migration safety. Platform-agnostic — SQLite, MySQL, PostgreSQL. Triggers when user mentions schema, migration, database design, add column, new table, data model, `bin/rails g model`, `bin/rails g migration`, belongs_to, has_many, foreign key, index, or "think about the data before I code". Inspired by 37signals Fizzy state-as-records patterns.
+description: Use when designing database schema, tables, columns, associations, or migrations in Rails before writing code. Walks the user through a Socratic interrogation (who owns this? who sees it? what lifecycle? what's unique?) before generating any migration. Applies to any app domain — content (blog, posts, articles), commerce (products, orders, cart), collaboration (todos, tasks, boards), directory (listings, profiles), transactional (bookings, reservations), social (comments, reviews, likes), or anything else. Covers new models, schema changes, adding columns, multi-tenancy / permission boundaries, state modeling (timestamps vs booleans), associations (belongs_to / has_many / has_many :through), indexes, foreign keys, NOT NULL discipline, default values, and reversible migration safety. Platform-agnostic — SQLite, MySQL, PostgreSQL. Triggers when user mentions schema, migration, database design, add column, new table, data model, `bin/rails g model`, `bin/rails g migration`, belongs_to, has_many, foreign key, index, or "think about the data before I code". Inspired by 37signals Fizzy state-as-records patterns.
 ---
 
 # Schema Design Flow — Think in Questions, Not Tables
 
-> Non-programmers plan apps in stories. Developers think in tables. This skill bridges both: Claude asks the story questions, the student answers, Claude drafts the tables. Never generate migrations without running the interrogation first.
+> Non-programmers plan apps in stories. Developers think in tables. This skill bridges both: Claude asks the story questions, the student answers, Claude drafts the tables. **Never generate migrations without running the interrogation first** — regardless of what kind of app it is (blog, store, booking, directory, CRM, social, internal tool).
 
 ## Philosophy
 
@@ -13,144 +13,289 @@ description: Use when designing database schema, tables, columns, associations, 
 
 **The rule:** Before writing a single `bin/rails generate migration`, run the Socratic flow. Capture answers in words (or update the PRD). Only then draft the schema.
 
-## The Socratic Interrogation Flow
+## The Socratic Interrogation — Universal Questions
 
-When the user says *"add a Post model"* or *"I need a team todo list"*, **do not** immediately scaffold. Ask these questions first — one batch, in plain language:
+Works for **any domain** — blog posts, e-commerce products, bookings, directory listings, social comments, internal CRM records. Ask all that apply, in one batch, in plain language:
 
-### Universal questions (every new table)
+### The Core 7 (every new table)
 
-1. **Who creates this record?** (one user? any authenticated user? admin only? system-generated?)
-2. **Who can see it?** (public? only the creator? their team? their tenant/account?)
-3. **Who can edit or delete it?** (creator only? admin? never?)
-4. **Does it belong to something bigger?** (a user, a team, an account, a project?)
-5. **What's the lifecycle?** (draft → published? open → closed? created → deleted? or just "exists"?)
-6. **What makes it unique?** (is there a name / code / slug that can't repeat within a scope?)
-7. **What happens when the parent is deleted?** (delete children? orphan them? forbid delete?)
+1. **Who creates this record?** (owner, any authenticated user, admin only, system-generated, public?)
+2. **Who can see it?** (public, owner only, their team / account, paying customers, logged-in users?)
+3. **Who can edit or delete it?** (owner, admin, moderators, nobody?)
+4. **Does it belong to something bigger?** (a user, a team, an account, a parent record, a category?)
+5. **What's the lifecycle?** (just "exists," or draft → published → archived, or open → closed, or pending → paid → fulfilled?)
+6. **What makes it unique?** (name, slug, code, email, SKU, combination of columns?)
+7. **What happens when the parent is deleted?** (cascade delete, orphan, prevent delete?)
 
-### Context-specific (add these when relevant)
+### Context-specific (add when relevant)
 
-8. **Multi-tenant app?** → *Does every table need an `account_id` / `workspace_id` for isolation?*
-9. **Soft vs hard delete?** → *Do we need a trash/undo, or is gone forever OK?*
-10. **Audit trail needed?** → *Do we care who changed what and when?*
-11. **Counts to display fast?** → *Will we show "50 posts" in a list? (counter_cache)*
-12. **Attachments?** → *Files / images? (Active Storage — no `image_url` column)*
-13. **Associations to other models?** → *What else does this record point to or own?*
+8. **Multi-tenant app?** → Every user-owned table needs `account_id` / `workspace_id` / `tenant_id`.
+9. **Soft vs hard delete?** → Trash / undo, or gone forever?
+10. **Audit trail?** → Do we care who changed what and when?
+11. **Counts for display?** → Will we show "50 posts" or "3 unread" fast? (counter_cache)
+12. **Attachments?** → Files / images? (Active Storage — no `image_url` column)
+13. **Other associations?** → What else does this record point to or own?
+14. **Search / filtering?** → Will we filter by status, date range, category? (drives indexes)
 
 **Rule:** Ask all applicable questions in one message. Then wait for answers. Don't write code in the middle of the interrogation.
 
-## Example Interrogation (Team Todo App)
+## How the Interrogation Adapts by Domain
 
-User prompt:
-> *"Bikin table untuk team todo list."*
+Same 7 core questions, different answers reveal different schema shapes.
 
-**Bad** (skipping the flow):
+| Domain | Typical "who creates" | Typical "lifecycle" | Typical "unique" |
+|---|---|---|---|
+| **Content** (blog, article, page) | Author / admin | `draft → published → archived` | slug |
+| **Commerce** (product, variant) | Admin / seller | `active → out-of-stock → discontinued` | SKU, slug |
+| **Order / transaction** | Buyer | `pending → paid → fulfilled → refunded` | order number |
+| **Collaboration** (todo, task, ticket) | Team member | `open → doing → done` | (none — title repeats OK) |
+| **Directory** (listing, profile) | Owner | `pending review → published → hidden` | slug |
+| **Booking / reservation** | Customer | `requested → confirmed → cancelled → completed` | (date + resource combo) |
+| **Social** (comment, review) | Any user | `visible → flagged → hidden` | (none) |
+| **Messaging** (message, notification) | Sender / system | `sent → read → archived` | (none) |
+
+Use this as a cheat sheet when asking: *"Is this more like a content record, a transaction, or a collaboration record?"* — the answer narrows question #5.
+
+## Example Interrogations (Three Domains, Same Flow)
+
+### Example A — Content (Blog Post)
+
+User: *"Bikin table untuk blog post."*
+
+Claude (good):
 ```
-Sure! Here's the migration:
-bin/rails generate model Todo title:string completed:boolean user:references
+Sebelum bikin migration, saya tanya 7 hal dulu:
+
+1. Siapa yang bikin post — cuma kamu sebagai author, atau ada author lain?
+2. Siapa yang bisa baca — public, atau login only?
+3. Siapa yang bisa edit / delete — author aja, atau ada editor?
+4. Post ini punya category / tag? Punya author (belongs_to user)?
+5. Lifecycle — langsung publish, atau ada draft dulu?
+6. Apa yang unik — slug dari title, atau ID aja cukup?
+7. Kalau author dihapus, postnya ikut hilang atau tetap (anonymous author)?
+
+Plus 2 ekstra: butuh hero image (Active Storage)? Butuh counter berapa comment per post?
 ```
 
-**Good** (interrogate first):
+### Example B — Commerce (Product + Order)
+
+User: *"Saya mau jual produk digital. Perlu table untuk product dan order."*
+
+Claude (good):
 ```
-Sebelum bikin migration, saya perlu tanya 7 hal dulu — supaya schema-nya
-pas sekali jadi, tidak perlu diulang:
+Dua table sekaligus. Saya tanya per table:
 
-1. Siapa yang bikin todo — anggota team, atau admin team saja?
-2. Siapa yang bisa lihat — semua anggota team, atau yang di-assign saja?
-3. Siapa yang bisa edit / delete — yang bikin, admin, atau yang di-assign?
-4. Todo ini milik "team" ya? Berarti ada model Team juga — sudah ada?
-5. Apa lifecycle-nya — cuma "done / not done", atau ada "in progress" juga?
-6. Kalau team dihapus, todo-nya ikut hilang atau disimpan?
-7. Perlu assign ke orang tertentu, atau todo bebas dikerjakan siapa saja?
+PRODUCT:
+1. Siapa bikin — kamu admin aja, atau multi-seller?
+2. Siapa bisa lihat — public semua, atau cuma member?
+3. Siapa bisa edit — admin aja kan?
+4. Product punya category? Punya file (Active Storage)?
+5. Lifecycle — active / out-of-stock / discontinued?
+6. Unik — slug dari name, atau SKU?
+7. Hapus product — apakah order lama yang pakai product itu juga hilang?
 
-Jawab dalam 1-2 kalimat per pertanyaan, saya tunggu dulu baru bikin schema.
+ORDER:
+1. Siapa bikin — buyer saat checkout, benar?
+2. Siapa bisa lihat — buyer + admin saja?
+3. Siapa bisa edit — admin only (refund), buyer gak bisa?
+4. Order belongs_to buyer (User) dan product — benar?
+5. Lifecycle — pending → paid → fulfilled → refunded?
+6. Unik — order_number (readable) atau UUID?
+7. Hapus buyer — order tetap disimpan (audit), jadi nullify atau restrict.
 ```
 
-Once the user answers, draft the schema in the **schema summary format** below — still no code — and confirm before generating the migration.
+### Example C — Booking (Reservation)
 
-## Schema Summary Format (Draft Before Migrating)
+User: *"App untuk booking studio foto per jam."*
 
-After interrogation, present the draft as a plain-language table, not code. This is the student's last checkpoint:
+Claude (good):
+```
+Domain booking = conflict prevention jadi penting. Saya tanya:
+
+1. Siapa bikin booking — customer (public form), atau admin only?
+2. Siapa bisa lihat — customer yang booking + admin?
+3. Siapa bisa cancel — customer sendiri sampai H-1, admin kapan aja?
+4. Booking belongs_to customer + studio? Studio punya owner?
+5. Lifecycle — requested → confirmed → completed → cancelled?
+6. Unik — kombinasi (studio_id, start_at, end_at) gak boleh overlap?
+   → ini pakai custom validation + index, bukan DB unique biasa
+7. Kalau studio ditutup (dihapus) — booking lama diapain?
+
+Plus: butuh buffer time antar booking? Pricing per jam di product, atau per booking?
+```
+
+**Notice:** Same 7 questions. Different answers → different schema shapes. Same flow works whether the app is a blog, a store, a CRM, a booking tool, or an internal dashboard.
+
+## The Schema Summary Template
+
+After interrogation, draft the schema in **plain language** (not code yet). This is the student's last checkpoint:
 
 ```
-Table: todos
-- id (primary key — Rails default)
-- team_id (references teams, NOT NULL)  ← multi-tenant anchor
-- creator_id (references users, NOT NULL) ← who made this
-- assignee_id (references users, nullable) ← who's doing it (optional)
-- title (string, NOT NULL, max 255)
-- description (text, nullable)
-- status (string, NOT NULL, default: "open")  ← "open" | "doing" | "done"
-- due_on (date, nullable)
-- completed_at (datetime, nullable)  ← timestamp, not boolean
+Table: <plural_name>
+- id (primary key)
+- <parent>_id (references <parents>, NOT NULL / nullable)  ← "belongs to" from Q4
+- <creator>_id (references users, NOT NULL)                 ← "who creates" from Q1
+- <tenant>_id (references accounts, NOT NULL)               ← multi-tenancy Q8
+- <business columns based on the domain>
+- <status> (string, NOT NULL, default: "<initial>")         ← lifecycle from Q5
+- <state>_at (datetime, nullable)                            ← timestamp states
 - timestamps (created_at, updated_at)
 
 Indexes:
-- team_id (every query scoped by team)
-- [team_id, status] (list "open" todos per team fast)
-- [assignee_id, completed_at] (my-todos page)
+- <tenant>_id                     ← every query scopes by tenant
+- [<tenant>_id, <status>]         ← list by status fast
+- <unique business key>           ← unique: true
 
 Associations:
-- belongs_to :team
-- belongs_to :creator, class_name: "User"
-- belongs_to :assignee, class_name: "User", optional: true
+- belongs_to :<parent>
+- belongs_to :<creator>, class_name: "User"
+- has_many :<children>, dependent: :<destroy|nullify|restrict>
 
 Cascade:
-- team.destroy → todos deleted (dependent: :destroy)
-- user.destroy → blocked if they created any todos (foreign_key)
+- <parent>.destroy → <this> <cascade decision from Q7>
 ```
 
-Then ask: *"Oke ga schema-nya? Kalau setuju, saya bikin migration. Kalau ada yang mau diubah, sekarang waktunya."*
+Fill in the blanks for the domain. Then ask: *"Oke ga schema-nya? Kalau setuju, saya bikin migration. Kalau ada yang mau diubah, sekarang waktunya."*
 
-## Migration Patterns (Rails 8, Platform-Agnostic)
+## Worked Draft — Blog Post (Content Domain)
 
-### Generate via Rails generator
+```
+Table: posts
+- id
+- author_id (references users, NOT NULL)
+- account_id (references accounts, NOT NULL)     ← multi-tenant blog platform
+- title (string, NOT NULL, max 255)
+- slug (string, NOT NULL, max 255)
+- body (text, NOT NULL)
+- published_at (datetime, nullable)               ← timestamp = lifecycle, no `published` bool
+- comments_count (integer, NOT NULL, default 0)   ← counter_cache
+- timestamps
 
-```bash
-bin/rails generate migration CreateTodos \
-  team:references creator:references assignee:references{null} \
-  title:string description:text status:string due_on:date completed_at:datetime
+Indexes:
+- account_id
+- [account_id, published_at]                      ← "published posts for this account"
+- [account_id, slug] unique                       ← slug unique per account, not globally
 
-bin/rails db:migrate
+Associations:
+- belongs_to :author, class_name: "User"
+- belongs_to :account
+- has_many :comments, dependent: :destroy
+- has_one_attached :hero_image                    ← Active Storage, no image column
+
+Cascade:
+- author.destroy → restrict (keep posts even if author gone, nullify author instead)
+- account.destroy → destroy (whole workspace removal takes posts)
 ```
 
-Open the generated file and tighten it before migrating.
+## Worked Draft — Order (Commerce Domain)
 
-### The reversible migration skeleton
+```
+Table: orders
+- id
+- buyer_id (references users, NOT NULL)
+- account_id (references accounts, NOT NULL)      ← multi-seller platform
+- number (string, NOT NULL, max 20)                ← human-readable order number
+- amount_cents (integer, NOT NULL)                 ← never float for money
+- currency (string, NOT NULL, default "IDR", max 3)
+- status (string, NOT NULL, default "pending")     ← pending|paid|fulfilled|refunded
+- paid_at (datetime, nullable)
+- fulfilled_at (datetime, nullable)
+- refunded_at (datetime, nullable)
+- timestamps
+
+Indexes:
+- account_id
+- [account_id, status]
+- [account_id, number] unique
+- buyer_id
+
+Associations:
+- belongs_to :buyer, class_name: "User"
+- belongs_to :account
+- has_many :line_items, dependent: :destroy
+- has_many :products, through: :line_items
+
+Cascade:
+- buyer.destroy → nullify buyer_id (keep order for financial audit)
+- account.destroy → restrict (refuse to delete account with orders — force refund first)
+```
+
+## Worked Draft — Booking (Transactional Domain)
+
+```
+Table: bookings
+- id
+- customer_id (references users, NOT NULL)
+- resource_id (references resources, NOT NULL)    ← studio, room, equipment, etc.
+- start_at (datetime, NOT NULL)
+- end_at (datetime, NOT NULL)
+- status (string, NOT NULL, default "requested")  ← requested|confirmed|cancelled|completed
+- confirmed_at, cancelled_at, completed_at (datetime, nullable)
+- timestamps
+
+Indexes:
+- resource_id
+- [resource_id, start_at, end_at]                 ← conflict detection queries
+- customer_id
+
+Associations:
+- belongs_to :customer, class_name: "User"
+- belongs_to :resource
+
+Validations (not schema, but flag during interrogation):
+- no overlapping bookings for same resource_id where status in [requested, confirmed]
+
+Cascade:
+- resource.destroy → restrict (refuse — redirect admin to cancel bookings first)
+- customer.destroy → nullify (keep booking history for the resource owner)
+```
+
+## Migration Pattern — Reversible Skeleton
+
+Every new table follows this shape regardless of domain:
 
 ```ruby
-class CreateTodos < ActiveRecord::Migration[8.1]
+class Create<Records> < ActiveRecord::Migration[8.1]
   def change
-    create_table :todos do |t|
-      t.references :team,     null: false, foreign_key: true
-      t.references :creator,  null: false, foreign_key: { to_table: :users }
-      t.references :assignee, null: true,  foreign_key: { to_table: :users }
+    create_table :<records> do |t|
+      # Required parents (NOT NULL + foreign key)
+      t.references :<parent>, null: false, foreign_key: true
 
-      t.string   :title,       null: false, limit: 255
-      t.text     :description
-      t.string   :status,      null: false, default: "open"
-      t.date     :due_on
-      t.datetime :completed_at
+      # Required user relationships (aliased FK when name differs from model)
+      t.references :<creator>, null: false, foreign_key: { to_table: :users }
+
+      # Optional user relationships
+      t.references :<other_user>, null: true, foreign_key: { to_table: :users }
+
+      # Business columns
+      t.string   :<name>,   null: false, limit: 255
+      t.text     :<body>
+      t.string   :<status>, null: false, default: "<initial>"
+      t.integer  :<count>,  null: false, default: 0
+      t.datetime :<event>_at                       # nullable timestamps for state
+      t.decimal  :<money>,  precision: 10, scale: 2  # never :float for money
 
       t.timestamps
     end
 
-    add_index :todos, [:team_id, :status]
-    add_index :todos, [:assignee_id, :completed_at]
+    # Indexes matching real query shapes
+    add_index :<records>, [:<tenant>_id, :<status>]
+    add_index :<records>, :<unique_slug>, unique: true
   end
 end
 ```
 
-**Why these choices:**
+**Why these choices (apply to any domain):**
 - `null: false` on everything required. Defaults at DB level, not app level.
 - `limit: 255` on strings — explicit, works identically on SQLite / MySQL / Postgres.
 - `status` as `string`, not `boolean` or integer enum. Readable in DB, swappable.
-- `completed_at` is a timestamp, not `completed boolean`. One column carries state + when.
-- Composite indexes match the real query shapes.
-- `foreign_key: true` adds DB-level integrity (survives application bugs).
+- State-carrying `*_at` columns over boolean flags.
+- Composite indexes match the real query shapes (status lists, tenant scoping).
+- `foreign_key: true` adds DB-level integrity (survives app bugs and raw SQL).
 
 ## Column Naming — The Golden Rules
 
-### Timestamps over booleans
+### Timestamps over booleans (works for any domain)
 
 | Boolean (avoid) | Timestamp (prefer) | What it captures |
 |---|---|---|
@@ -159,174 +304,161 @@ end
 | `verified` | `verified_at` | state + when |
 | `archived` | `archived_at` | state + when |
 | `read` | `read_at` | state + when |
+| `paid` | `paid_at` | state + when |
+| `confirmed` | `confirmed_at` | state + when |
+| `approved` | `approved_at` | state + when |
 
-Query is just `where.not(published_at: nil)` — same ergonomics, more info.
+Query is just `where.not(<action>_at: nil)` — same ergonomics, more information.
 
 ### `*_at` suffix for moments in time
 
-`created_at`, `published_at`, `last_signed_in_at`. Always `datetime`, never `date` (unless truly a date — birthdays, due dates).
+`created_at`, `published_at`, `last_signed_in_at`, `paid_at`. Always `datetime`, never `date` — unless it's truly a date with no time component (birthdays, due dates, events spanning a full day).
 
-### Reserved singular names — avoid `type` (Rails STI collision) and `class`
+### Reserved names to avoid
 
-### Counts
+- `type` — collides with Rails STI
+- `class` — Ruby reserved
+- `id` — already the primary key
+- `user` / `post` / `order` — use `user_id`, `post_id`, `order_id` instead
 
-`posts_count`, `comments_count` — integer, default 0, NOT NULL. Managed via `counter_cache: true` on `belongs_to` or manually via `increment!`.
+### Count columns
 
-## State Modeling — The Fizzy Pattern
+`comments_count`, `line_items_count`, `bookings_count` — integer, default 0, NOT NULL. Managed via `counter_cache: true` on `belongs_to` or manually via `.increment!`.
 
-37signals Fizzy (kanban app) teaches this: **separate records beat boolean flags** when state has history, metadata, or optional context.
+### Money columns
 
-### Example: "this card is closed"
+`amount_cents` as integer (cents) + separate `currency` string. Never `:float`. If you prefer decimal: `decimal, precision: 12, scale: 2`.
 
-**Naive (avoid):**
-```ruby
-# cards table
-t.boolean :closed, default: false
-t.datetime :closed_at
-t.references :closed_by_user, null: true
-```
+## State Modeling — The Fizzy "State as Records" Pattern
 
-**Fizzy pattern (prefer):**
-```ruby
-# separate closures table
-create_table :closures do |t|
-  t.references :card, null: false, foreign_key: true
-  t.references :user, null: true,  foreign_key: true  # who closed it
-  t.text :reason
-  t.timestamps
-end
-# cards has_one :closure
-# card.closed? = card.closure.present?
-```
+37signals Fizzy teaches this: **separate records beat boolean flags** when state has history, metadata, or optional context. Applies across domains.
 
-**When to reach for it:**
-- State has **who / when / why** metadata
-- State can be **undone** (closure can be deleted → card is open again)
-- State is **rare** relative to the parent (don't bloat every card with `closed_*` columns)
+### When state as a column is enough
 
-**When a column suffices:**
-- State is binary, no metadata, no undo → single timestamp column (`completed_at`)
-- State is always-present → enum column (`status`)
+- Binary, no metadata, no undo → single timestamp: `completed_at`, `archived_at`
+- Always-present workflow step → enum column: `status`
 
-### Example: status as enum
+### When state deserves its own record
 
-```ruby
-# migration
-t.string :status, null: false, default: "drafted"
+- State has **who / when / why / how** metadata
+- State can be **undone** (deleting the state record reverts it)
+- State is **rare** relative to the parent (don't bloat the main table)
 
-# model
-class Post < ApplicationRecord
-  enum :status, { drafted: "drafted", published: "published", archived: "archived" }
-end
-```
+### Cross-domain examples of state-as-records
 
-String-backed enums are portable across SQLite/MySQL/Postgres and readable in the DB.
+| Parent | Flag you might add (avoid) | State record (prefer) |
+|---|---|---|
+| Post | `flagged boolean` | `Flag` record (flagged_by, reason, at) |
+| Order | `refunded boolean` | `Refund` record (amount, reason, issued_by) |
+| Comment | `hidden boolean` | `Moderation` record (hidden_by, reason, at) |
+| Booking | `cancelled boolean` | `Cancellation` record (cancelled_by, reason, at) |
+| User | `banned boolean` | `Ban` record (banned_by, expires_at, reason) |
+| Task | `blocked boolean` | `Blocker` record (blocked_by_task_id, note) |
 
-## Associations
+**Rule of thumb:** if you find yourself about to add `<state>_by`, `<state>_reason`, or `<state>_note` alongside a `<state>` boolean → reach for a state record instead.
+
+## Associations — Domain-Agnostic Patterns
 
 ### belongs_to defaults
 
 ```ruby
-belongs_to :team
-belongs_to :creator, class_name: "User"
-belongs_to :assignee, class_name: "User", optional: true  # explicit when nullable
+belongs_to :<parent>                                              # required (Rails 5+ default)
+belongs_to :<parent>, optional: true                              # explicit when nullable
+belongs_to :<named>, class_name: "<Model>"                        # when column name differs
+belongs_to :<named>, class_name: "<Model>", foreign_key: "<col>"  # when both differ
 ```
 
-Rails 5+ makes `belongs_to` required by default. Use `optional: true` when nullable is intentional.
-
-### has_many + dependent
+### has_many + dependent (cascade decision from interrogation Q7)
 
 ```ruby
-class Team < ApplicationRecord
-  has_many :todos, dependent: :destroy       # parent gone → children gone (with callbacks)
-  has_many :events, dependent: :delete_all   # bulk delete, no callbacks (faster)
-  has_many :memberships, dependent: :restrict_with_error  # prevent delete if children exist
-end
+has_many :<children>, dependent: :destroy                # cascade, run callbacks
+has_many :<children>, dependent: :delete_all             # cascade, faster, no callbacks
+has_many :<children>, dependent: :nullify                # orphan but keep
+has_many :<children>, dependent: :restrict_with_error    # refuse delete if children exist
 ```
 
 | Option | When |
 |---|---|
 | `:destroy` | Most common. Runs child callbacks (e.g., Active Storage purge). |
-| `:delete_all` | Child has no callbacks worth running. Faster. |
-| `:restrict_with_error` | Refuse to delete parent while children exist. |
-| `:nullify` | Set child's FK to NULL instead of deleting. |
-| (nothing) | Rarely. DB-level foreign key decides. |
+| `:delete_all` | Bulk cascade. No callbacks worth running. |
+| `:restrict_with_error` | Parent is a system-of-record; children must be cleaned first. |
+| `:nullify` | Child can exist meaningfully without parent (orphaned orders after user delete). |
 
 ### has_many :through for many-to-many
 
+Always prefer over `has_and_belongs_to_many` — the join model can grow (roles, permissions, `invited_at`, `last_seen_at`).
+
 ```ruby
-class Team < ApplicationRecord
-  has_many :memberships
-  has_many :users, through: :memberships
+class <Parent_A> < ApplicationRecord
+  has_many :<joins>
+  has_many :<parent_bs>, through: :<joins>
 end
 
-class User < ApplicationRecord
-  has_many :memberships
-  has_many :teams, through: :memberships
+class <Parent_B> < ApplicationRecord
+  has_many :<joins>
+  has_many :<parent_as>, through: :<joins>
 end
 
-class Membership < ApplicationRecord
-  belongs_to :team
-  belongs_to :user
+class <Join> < ApplicationRecord
+  belongs_to :<parent_a>
+  belongs_to :<parent_b>
+  # Room for role, permissions, invited_at, etc.
 end
 ```
-
-Always prefer `has_many :through` over `has_and_belongs_to_many` — the join model can grow (roles, invited_at, etc.).
 
 ## Indexes — Match Your Queries
 
 ### The three types you'll actually use
 
 ```ruby
-add_index :todos, :team_id                        # single column, matches scope queries
-add_index :todos, [:team_id, :status]             # composite, matches list-filtered queries
-add_index :users, :email, unique: true            # unique constraint at DB level
+add_index :<records>, :<parent>_id                         # single column, scope queries
+add_index :<records>, [:<parent>_id, :<status>]            # composite, filtered lists
+add_index :<records>, :<unique_key>, unique: true          # unique constraint at DB level
 ```
 
 ### Composite index rule
 
-**Leading column must match your `WHERE`.** Index `[:team_id, :status]` supports:
-- `WHERE team_id = ?` ✅
-- `WHERE team_id = ? AND status = ?` ✅
+**Leading column must match your `WHERE`.** Index `[:account_id, :status]` supports:
+- `WHERE account_id = ?` ✅
+- `WHERE account_id = ? AND status = ?` ✅
 - `WHERE status = ?` ❌ (index not used — leading column missing)
+
+Order the composite by selectivity: tenant first, then status/date.
 
 ### When to add an index
 
 - Every foreign key (`t.references` adds it automatically)
 - Every column you `WHERE`, `ORDER BY`, or `JOIN` on
-- Unique business keys (email, slug, code)
+- Unique business keys (email, slug, code, SKU, order number)
 
 **Don't** index every column "just in case" — indexes cost write speed + disk.
 
-## Multi-Tenancy — Always Scope by Account
+## Multi-Tenancy — Always Scope by Tenant
 
-If the app has multiple customers / teams / workspaces, **every user-owned table gets the tenant FK**.
+If the app has multiple customers / teams / workspaces, **every user-owned table gets the tenant FK**. The tenant column is called `account_id`, `workspace_id`, `organization_id`, `tenant_id` — pick one name per app and use it everywhere.
 
 ```ruby
-create_table :todos do |t|
+create_table :<records> do |t|
   t.references :account, null: false, foreign_key: true  # tenant anchor
-  t.references :team,    null: false, foreign_key: true
-  # ...
+  # ... rest of the table
 end
 
-add_index :todos, [:account_id, :team_id, :status]  # leading column = tenant
+add_index :<records>, [:account_id, :<status>]            # leading column = tenant
+add_index :<records>, [:account_id, :<slug>], unique: true # unique scoped to tenant
 ```
 
 In models:
 ```ruby
-class Todo < ApplicationRecord
+class <Record> < ApplicationRecord
   belongs_to :account
-  belongs_to :team
-
-  # Convenience: infer account from team (avoid passing it manually)
-  # belongs_to :account, default: -> { team.account }
+  # Optional: infer account from parent to avoid passing it manually
+  # belongs_to :account, default: -> { <parent>.account }
 end
 ```
 
-Enforce in controller via `Current.account`:
+Enforce at the controller via `Current.account`:
 ```ruby
-# All queries scoped automatically
-Current.account.todos.where(team_id: params[:team_id])
+Current.account.<records>.where(status: "active")  # all queries tenant-scoped
 ```
 
 ## Platform-Agnostic Column Types
@@ -335,22 +467,23 @@ Stick to these for SQLite ↔ MySQL ↔ PostgreSQL portability:
 
 | Use | Type | Notes |
 |---|---|---|
-| Short text | `:string` | Default limit 255 in MySQL; explicit `limit: 255` is safest |
+| Short text | `:string` | Default 255 in MySQL; explicit `limit: 255` is safest |
 | Long text | `:text` | Unlimited on all three |
 | Integer | `:integer` | 4-byte |
-| Big integer | `:bigint` | 8-byte, for IDs / large counts |
+| Big integer | `:bigint` | 8-byte, for external IDs / large counts |
 | Decimal money | `:decimal, precision: 10, scale: 2` | Never `:float` for money |
-| Date only | `:date` | Birthdays, due dates |
-| Date + time | `:datetime` | `*_at` columns |
+| Money (cents pattern) | `:integer` | `amount_cents` — portable + arithmetic-safe |
+| Date only | `:date` | Birthdays, due dates, all-day events |
+| Date + time | `:datetime` | `*_at` columns, bookings, events |
 | Boolean | `:boolean, default: false, null: false` | Rare — prefer timestamps |
-| Structured | `:json` | Works on all three (Postgres stores as `json`, MySQL as `json`, SQLite as text) |
-| UUID | `:string, limit: 36` | Generate via `SecureRandom.uuid`; portable |
+| Structured data | `:json` | All three support it (indexing is Postgres-only) |
+| UUID token | `:string, limit: 36` | Generate via `SecureRandom.uuid`; portable |
 
 **Avoid for portability:**
-- `:jsonb` (Postgres-only — use `:json` if you need it; index support is reduced)
+- `:jsonb` (Postgres-only — use `:json` if you need flexible data)
 - `:citext` (Postgres-only — use `:string` + normalize via `.downcase` before save)
 - `:inet`, `:array`, `:hstore` (Postgres-only)
-- `t.uuid` native type (Postgres-only; use string UUID above for portability)
+- `t.uuid` native type (Postgres-only; use string UUID for portability)
 - `algorithm: :concurrently` on indexes (Postgres-only)
 - Partial indexes `where: "..."` (Postgres + SQLite only — MySQL ignores)
 
@@ -359,11 +492,12 @@ When Postgres-specific features are worth it, **commit to Postgres for the proje
 ## Common Migration Operations
 
 ### Add a column
+
 ```ruby
-class AddDueOnToTodos < ActiveRecord::Migration[8.1]
+class Add<Column>To<Records> < ActiveRecord::Migration[8.1]
   def change
-    add_column :todos, :due_on, :date
-    add_index  :todos, :due_on
+    add_column :<records>, :<column>, :<type>
+    add_index  :<records>, :<column>   # if it'll appear in WHERE/ORDER
   end
 end
 ```
@@ -374,14 +508,14 @@ Large tables need this pattern to avoid long locks:
 
 ```ruby
 # Migration 1 — add as nullable
-add_column :todos, :priority, :integer
+add_column :<records>, :<column>, :<type>
 
 # Deploy + backfill in a rake task or Active Job
-Todo.in_batches.update_all(priority: 0)
+<Record>.in_batches.update_all(<column>: <default_value>)
 
 # Migration 2 — enforce NOT NULL + default
-change_column_null    :todos, :priority, false
-change_column_default :todos, :priority, from: nil, to: 0
+change_column_null    :<records>, :<column>, false
+change_column_default :<records>, :<column>, from: nil, to: <default_value>
 ```
 
 Small tables (< 10K rows) — one migration is fine.
@@ -390,21 +524,21 @@ Small tables (< 10K rows) — one migration is fine.
 
 ```ruby
 # Deploy 1 — add new column, keep old, dual-write in app
-add_column :todos, :title, :string
+add_column :<records>, :<new_name>, :<type>
 # (backfill + update app to write to both)
 
 # Deploy 2 — drop old
-remove_column :todos, :name, :string
+remove_column :<records>, :<old_name>, :<type>
 ```
 
-Never rename in one shot on a production app — older web containers will 500 on the missing column during deploy.
+Never rename in one shot on a production app — old web containers will 500 on the missing column during rollout.
 
 ### Drop a column
 
 ```ruby
-class RemoveCompletedFromTodos < ActiveRecord::Migration[8.1]
+class Remove<Column>From<Records> < ActiveRecord::Migration[8.1]
   def change
-    remove_column :todos, :completed, :boolean, default: false, null: false
+    remove_column :<records>, :<column>, :<type>, default: <original>, null: <original>
   end
 end
 ```
@@ -415,43 +549,48 @@ Include the full original definition as the 3rd+ argument so `down` is reversibl
 
 **Default to NOT NULL.** Every column should be NOT NULL unless nullability is a real business fact.
 
-| Column | NOT NULL? |
-|---|---|
-| `title` on Post | Yes — every post must have a title |
-| `published_at` on Post | No — `nil` means draft |
-| `user_id` on Post | Yes — every post has an author |
-| `description` on Post | Debatable — if "optional", NULL is fine; if "empty string OK", use `default: ""` NOT NULL |
+| Column | NOT NULL? | Reason |
+|---|---|---|
+| `title` on any content | Yes | No content without a title |
+| `amount_cents` on order | Yes | Orders without totals are broken |
+| `published_at` on post | No | `NULL` means draft |
+| `completed_at` on task | No | `NULL` means open |
+| `<parent>_id` (required) | Yes | Orphans are always a bug |
+| `<parent>_id` (optional) | No | Only if "no parent" is meaningful |
 
-Rule: if you'd say "the column *has* to have a value," add `null: false, default: X`.
+**Rule:** if you'd say "the column *has* to have a value," add `null: false, default: X`.
 
-## Anti-Patterns
+## Anti-Patterns (Universal)
 
 - ❌ Generating migrations before interrogation (defeats the skill's purpose)
-- ❌ Boolean flags where a timestamp carries more info (`published` vs `published_at`)
+- ❌ Boolean flags where a timestamp carries more info (`paid` vs `paid_at`)
 - ❌ Nullable columns without thinking (`null: true` by default is lazy)
 - ❌ Missing foreign key constraints (app-only integrity breaks in raw SQL / console bugs)
 - ❌ Missing indexes on FK + query columns (slow at 10K rows)
+- ❌ Storing money as `:float` (rounding errors — use `:integer` cents or `:decimal`)
 - ❌ Postgres-only features (`jsonb`, `citext`, `gen_random_uuid()`) in a "portable" schema
-- ❌ STI `type` column when a regular polymorphic or separate table would be cleaner
+- ❌ STI `type` column when a polymorphic or separate table would be cleaner
 - ❌ `has_and_belongs_to_many` — always use `has_many :through` so the join can grow
 - ❌ Renaming columns in one deploy (causes 500s during rollout)
 - ❌ Changing a migration that already ran in production (create a new migration instead)
+- ❌ `deleted_at` soft delete without thought — it's additive complexity; cascade-destroy is usually simpler
 
 ## How to Use This Skill
 
-1. **User asks for a new model / table / schema change.**
-2. **Run the interrogation** — universal questions + context-specific. One batch.
+1. **User asks for a new model / table / schema change** (any domain).
+2. **Run the interrogation** — core 7 + applicable context questions. One batch.
 3. **Wait for answers.** Don't write code.
-4. **Draft the schema summary in plain language** (table above). Get confirmation.
-5. **Generate the migration.** Open the file, tighten defaults / nulls / indexes.
-6. **Run `bin/rails db:migrate`.**
-7. **Roll back once as a sanity check:** `bin/rails db:rollback && bin/rails db:migrate`. Both succeed → schema is reversible.
-8. **Commit.** Migrations are forever — git history proves intent.
+4. **Draft the schema summary in plain language** (template above, filled in for their domain).
+5. **Confirm with the user.** "Oke ga schema-nya?"
+6. **Generate the migration.** Open the file, tighten defaults / nulls / indexes.
+7. **Run `bin/rails db:migrate`.**
+8. **Sanity-check reversibility:** `bin/rails db:rollback && bin/rails db:migrate`. Both succeed → schema is reversible.
+9. **Commit.** Migrations are forever — git history proves intent.
 
 ## Related Skills
 
 - **prd-writing** — PRD informs "who owns / who sees / what lifecycle" (feeds the interrogation)
 - **rails-conventions** — models, validations, associations (the code after the schema)
-- **auth-setup** — permission boundaries shape tenant/account schema decisions
+- **auth-setup** — permission boundaries shape tenant / ownership schema decisions
 - **active-storage** — file columns (don't add `image_url` strings — use `has_one_attached`)
 - **rails-debug-helper** — diagnosing migration / schema drift issues
